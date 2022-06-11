@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        body {
+            background-color: darkblue;
+            color: white;
+        }
+        
+        td { 
+            padding: 10px;
+            color: white;
+            border-style: solid;
+            border-radius: 5px;
+        }
+        table { 
+            border-spacing: 10px;
+            border-collapse: separate;  
+        }
+        th {
+            border-style: solid;
+            border-radius: 5px;
+        }
+        #tituloForm{
+            font-size: 25px;
+            display: flex;
+            justify-content: center;
+        }
+        #todo{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 200vh;
+            font-family:Verdana, Geneva, Tahoma, sans-serif
+        }
+        #divAgregar{
+            display: flex;
+            justify-content: center;
+        }
+
+       
+        .button {
+            background-color: #2849dd;
+            border: none;
+            color: white;
+            padding: 8px 22px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 15px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        .button:hover {background-color: #1332bd}
+
+        .button:active {
+            background-color: #2849dd;
+            box-shadow: 0 2px rgb(95, 94, 129);
+            transform: translateY(4px);
+        }
+
+        input[type=text] {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        select {
+            font-size: 17px;
+            margin: 8px 0;
+        }
+        
+
+
+        /*Bloqueo de pantalla*/
+
+        .blocker {
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            height:100%;
+            width:100%;        
+            z-index: 50;   
+            opacity: 0.5;  
+            background-color: gray;     
+        }
+
+        
+        .popup {
+            display: flex;         
+            justify-content: center;
+            align-items: center;
+            position: fixed; 
+            top: 50%;
+            left: 50%;
+            
+            z-index: 100;                     
+            background-color: gray;  
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+
+            animation: spin 1s ease infinite;
+        }
+
+        @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+}
+    </style>
+
+    
+</head>
+<body>
+    <div id = "todo" style = "flex-grow: 1;">
+        <div id = "visualizador" style = "flex-grow: 1;">
+            <table id = "tabla">
+                <thead>
+                    <th>ID</th>
+                    <th>FABRICANTE</th>
+                    <th>MODELO</th>
+                    <th>AÑO DE LANZAMIENTO</th>
+                    <th>CANTIDAD DE PUERTAS</th>
+                    <th>TRANSMISIÓN 4X4</th>
+                    <th>Modificar</th>
+                    <th>Eliminar</th>
+                </thead>
+            </table>
+            <div id = "divAgregar">
+                <input type = "BUTTON" id = "btnAgregar" class="button" value = "Agregar Elemento">
+            </div>
+        </div>
+        <!-- Formulario alta modificacion: --> 
+        <div id = "formulario" style = "flex-grow: 1;">
+            <label id="tituloForm">Titulo formulario</label>
+            <br>
+            <label>Id:</label>
+            <br>
+            <input type = "TEXT" id = "txtId" readonly = "true">
+            <br>
+            <label>Fabricante:</label>
+            <br>
+            <input type = "TEXT" id = "txtFabricante">
+            <br>
+            <label>Modelo:</label>
+            <br>
+            <input type = "TEXT" id = "txtModelo">
+            <br>
+            <label>Año de lanzamiento:</label>
+            <br>
+            <input type = "TEXT" id = "txtAñoLanza">
+            <br>
+            Tipo:
+            <br>
+            <select name="cmbTipo" id="cmbTipo" onInput='actualizarLabels()'>
+                <option value="Auto">Auto</option>
+                <option value="Camioneta">Camioneta</option>
+            </select>
+            <br>
+            <label id = "labelMisc1">Cantidad de puertas:</label>
+            <br>
+            <input type = "TEXT" id = "txtMisc1">
+            <!-- Botones al pie del formulario alta modificacion: --> 
+            <div id = "botonesForm" style="flex-grow: 1;">
+                <input type = "BUTTON" id ="btnAceptar" class="button" value = "Aceptar">
+                <input type = "BUTTON" id ="btnCancelar" class="button" value = "Cancelar">       
+            </div>
+
+        </div>
+    </div>
+    <div id="divpopup" class ="popup"><label>Now loading..</label> <div id="spinner1" class="spinner"></div></div>
+    <div id="bloqueo" class ="blocker"></div>
+</body>
+
+<script>
+
+    //OOP
+    class Vehiculo{
+    constructor(id, fabricante, modelo, añoLanzamiento){
+        this.id = parseInt(id);
+        this.fabricante = fabricante;
+        this.modelo = modelo;
+        this.añoLanzamiento = añoLanzamiento;
+    }
+
+    static buscarVehiculoPorId(arrayVehiculos, id){   
+        for (let x = 0; x < arrayVehiculos.length; x++){
+            if (arrayVehiculos[x].id == id){
+                return arrayVehiculos[x];
+            }
+        }
+        return null;
+    }
+
+
+    static removeVehiculoById(arrayVehiculos, id){
+        for (let x = 0; x < arrayVehiculos.length; x++){
+            if (arrayVehiculos[x].id == id){
+                arrayVehiculos.splice(x, 1);
+                return true;
+            }
+        }
+        return false;
+
+    } 
+    //para los strings me fijo solo que no tengan numeros
+    static validarFabricante(fabricante){
+        
+        if (fabricante == "" || fabricante == null){
+            return false;
+        }
+        return true;
+    }
+
+    static validarModelo(modelo){
+        return Vehiculo.validarFabricante(modelo);
+    }
+
+    static validarAñoLanzamiento(año){
+        if (!isNaN(año) && año > 1920){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    static validarId(id){
+            if (Vehiculo.buscarVehiculoPorId(arrayVehiculos, id) != null){
+                return true;
+            } 
+                return false;
+            
+        }
+
+
+    static TraducirJson(strJson){
+    return JSON.parse(strJson);
+    }
+
+    static generarArrayVehiculos(arrayJson){
+            return arrayJson.map((elemento, indice, vector)=>{
+                return Vehiculo.discriminarYGenerarVehiculo(elemento);
+            }
+        );
+        
+    }
+
+    static discriminarYGenerarVehiculo(obj){
+        if (obj.hasOwnProperty("cantidadPuertas")){
+                return new Auto(
+                obj["id"],
+                obj["fabricante"],
+                obj["modelo"],
+                obj["añoLanzamiento"],
+                obj["cantidadPuertas"]);
+            } else {
+                return new Camioneta(
+                obj["id"],
+                obj["fabricante"],
+                obj["modelo"],
+                obj["añoLanzamiento"],
+                obj["transmision4x4"]);
+            }
+    }
+
+    toJsonString(conId){
+        let strParseable = "";
+        if (conId){
+            strParseable += '{"id":' + this.id + 
+                            ',"fabricante":"' + this.fabricante + 
+                            '","modelo":"'  +this.modelo + 
+                            '","añoLanzamiento":' + this.añoLanzamiento + ',';
+                           
+        } else {
+            strParseable =    '{"fabricante":"' + this.fabricante + 
+                            '","modelo":"'  + this.modelo +
+                            '","añoLanzamiento":' + this.añoLanzamiento + ',';
+        
+        }
+
+        
+
+
+        return strParseable;
+    }
+
+           
+    }
+
+class Auto extends Vehiculo{
+    constructor(id, fabricante, modelo, añoLanzamiento, cantidadPuertas){
+        super(id, fabricante, modelo, añoLanzamiento);
+        this.cantidadPuertas = cantidadPuertas;
+    }
+
+    
+    static validarCantidadPuertas(num){
+        if (!isNaN(num) && num >= 2){
+            return true;
+        }
+        return false;
+    }
+
+
+    toJsonString(conId){
+        let strParseable;
+        
+        strParseable = super.toJsonString(conId) + 
+                        '"cantidadPuertas":' + this.cantidadPuertas + '}';
+        
+        return strParseable;
+    }
+
+}
+
+class Camioneta extends Vehiculo{
+    constructor(id, fabricante, modelo, añoLanzamiento, transmision4x4){
+        super(id, fabricante, modelo, añoLanzamiento);
+        this.transmision4x4 = transmision4x4;
+    }
+
+    static validarAño(num){
+        if (!isNaN(num) && num >= 1 && num <= 5){
+            return true;
+        }
+        return false;
+    }
+
+    static validartransmision4x4(transmision){
+        
+        if (transmision == "SI" || transmision == "NO"){
+            return true;
+        }
+        return false;
+    }
+
+    toJsonString(conId){
+        let strParseable;
+        
+        strParseable = super.toJsonString(conId) + 
+                        '"transmision4x4":"' + this.transmision4x4 +'"}';
+        
+        return strParseable;
+    }
+
+   
+}
+
+
+
+
+//OBTENCION DE DATOS
+var arrayVehiculos;
+
+desbloquearPantalla();
+
+
+getVehiculosFETCHSinAsync();
+
+ocultarVisualizador();
+
+
+
+document.getElementById("btnCancelar").addEventListener("click", ()=>{mostrarVisualizador();});
+document.getElementById("btnAgregar").addEventListener("click", ()=>{actualizarTituloForm("Alta"); visualizarFormularioVacio("Alta");});
+
+document.getElementById("formulario").style.visibility = "hidden";
+
+
+
+//FUNCIONES DE GENERACION DE TABLA
+
+function generarTablaHtml(){
+        mostrarVisualizador();
+        let tabla = document.getElementById("tabla");
+        let cuerpoTabla = document.createElement("tbody");
+        cuerpoTabla.setAttribute("id", "cuerpoTabla");
+        
+        tabla.appendChild(cuerpoTabla);
+   
+        arrayVehiculos.forEach(element => {
+            let fila = document.createElement("tr");
+            fila.setAttribute("id", element.id);
+            if (element instanceof Camioneta){
+                generarCelda(fila, element.id);
+                generarCelda(fila, element.fabricante);
+                generarCelda(fila, element.modelo);
+                generarCelda(fila, element.añoLanzamiento);
+                generarCelda(fila, "N/A");
+                generarCelda(fila, element.transmision4x4);      
+            } else {
+                generarCelda(fila, element.id);
+                generarCelda(fila, element.fabricante);
+                generarCelda(fila, element.modelo);
+                generarCelda(fila, element.añoLanzamiento);
+                generarCelda(fila, element.cantidadPuertas);
+                generarCelda(fila, "N/A");
+                
+            }
+            generarCeldaBoton(fila, "Modificar");
+            generarCeldaBoton(fila, "Eliminar");
+
+            document.getElementById("cuerpoTabla").appendChild(fila);
+            
+        });
+        
+
+    }
+
+    function generarCelda(fila, valor){
+        let celda = document.createElement("td");
+        let valorCelda = valor;
+        celda.appendChild(document.createTextNode(valor)); 
+        fila.appendChild(celda);
+        
+            
+    }
+
+    function generarCeldaBoton(fila, texto){
+        let celda = document.createElement("td");
+        let boton = document.createElement("input");
+        boton.setAttribute("type", "button");
+        boton.setAttribute("class", "button");
+        boton.value = texto;
+        boton.addEventListener("click", ()=>{visualizarFormulario(fila)});
+        if (texto == "Modificar"){
+            boton.addEventListener("click", ()=>{establecerBotonAceptar(postVehiculoFETCH)});
+        } else {
+            boton.addEventListener("click", ()=>{establecerBotonAceptar(deleteVehiculoFETCH)});
+        }
+        boton.addEventListener("click", ()=>{actualizarTituloForm(texto)});
+        celda.appendChild(boton); 
+        fila.appendChild(celda); 
+            
+    }
+
+    function actualizarTituloForm(titulo){
+        document.getElementById("tituloForm").innerHTML = titulo;
+    }
+
+    function actualizarTabla(){
+        let tabla = document.getElementById("tabla");
+        tabla.removeChild(document.getElementById("cuerpoTabla"));
+        generarTablaHtml();
+    }
+
+
+    //FUNCIONES DE FORMULARIO
+
+
+    function visualizarFormularioVacio(tituloLabel){
+        activarComboBoxTipo();
+        ocultarVisualizador();
+        establecerBotonAceptar(putVehiculosXML);
+        document.getElementById("txtId").setAttribute("readonly", "true");
+        divFormulario = document.getElementById("formulario");
+        divFormulario.style.visibility = "visible";
+        document.getElementById("tituloForm").innerHTML = tituloLabel;
+        
+      
+    }
+
+    function visualizarFormulario(fila){
+        desactivarComboBoxTipo();
+        ocultarVisualizador();
+        var divFormulario = document.getElementById("formulario");
+        divFormulario.style.visibility = "visible";
+        
+
+        vehiculo = Vehiculo.buscarVehiculoPorId(arrayVehiculos, fila.id);
+
+        let txtId = document.getElementById("txtId");
+        txtId.value = vehiculo.id;
+        let txtFabricante = document.getElementById("txtFabricante");
+        txtFabricante.value = vehiculo.fabricante;
+        let txtModelo = document.getElementById("txtModelo");
+        txtModelo.value = vehiculo.modelo;
+        let txtAñoLanza = document.getElementById("txtAñoLanza");
+        txtAñoLanza.value = vehiculo.añoLanzamiento;
+
+        let cmbTipo = document.getElementById("cmbTipo");
+    
+
+        let labelMisc1 = document.getElementById("labelMisc1");
+        let txtMisc1 = document.getElementById("txtMisc1");
+        
+        if (vehiculo instanceof Auto){
+            cmbTipo.selectedIndex = 0;
+            labelMisc1.innerHTML = "Cantidad de Puertas:";
+            txtMisc1.value = vehiculo.cantidadPuertas;
+           
+
+        } else {
+            cmbTipo.selectedIndex = 1;
+            labelMisc1.innerHTML = "transmision4x4:";
+            txtMisc1.value = vehiculo.transmision4x4;
+
+        }
+
+       
+    }
+
+
+    function ocultarFormulario(){
+        document.getElementById("formulario").style.visibility = "hidden";
+        document.getElementById("txtId").value = "";
+        document.getElementById("txtFabricante").value = "";
+        document.getElementById("txtModelo").value = "";
+        document.getElementById("txtAñoLanza").value = "";
+        document.getElementById("txtMisc1").value = "";
+
+    }
+
+    function ocultarVisualizador(){
+        document.getElementById("visualizador").style.display = "none";
+
+    }
+
+    function mostrarVisualizador(){
+        ocultarFormulario();
+        document.getElementById("visualizador").style.display = "block";
+
+    }
+
+    //actualiza el texto del label de tipo que depende del vehiculo
+    function actualizarLabels(){
+        if (document.getElementById("cmbTipo").selectedIndex == 0){
+            document.getElementById("labelMisc1").innerHTML = "Cantidad de puertas:";
+        } else {
+            document.getElementById("labelMisc1").innerHTML = "Transmisión 4x4:";
+        }
+    }
+
+    function establecerBotonAceptar(callback){
+        let botonAceptar = document.getElementById("btnAceptar");
+        botonAceptar.replaceWith(botonAceptar.cloneNode(true));
+        botonAceptar = document.getElementById("btnAceptar");
+        botonAceptar.addEventListener("click", ()=>{callback()});
+    }
+
+
+    
+    //??
+    function desactivarComboBoxTipo(){
+        document.getElementById("cmbTipo").disabled = true;
+    }
+
+    function activarComboBoxTipo(){
+        document.getElementById("cmbTipo").disabled = false;
+    }
+
+
+
+    function bloquearPantalla(){
+        document.getElementById("bloqueo").style.visibility = "visible";
+        document.getElementById("divpopup").style.visibility = "visible";
+    }
+
+    function desbloquearPantalla(){
+        document.getElementById("bloqueo").style.visibility = "hidden";
+        document.getElementById("divpopup").style.visibility = "hidden";
+    }
+
+
+    //ABM MEMORIA
+    function agregarVehiculo(vehiculo, id){
+        vehiculo.id = id;
+        arrayVehiculos.push(vehiculo);
+        actualizarTabla();
+        return true;
+    }
+
+    
+
+    function modificarVehiculo(vehiculo){
+        let vehiculoAModificar = Vehiculo.buscarVehiculoPorId(arrayVehiculos, document.getElementById("txtId").value);
+        
+        if (vehiculoAModificar != null){
+            if (vehiculoAModificar instanceof Auto){
+                vehiculoAModificar.fabricante = vehiculo.fabricante;
+                vehiculoAModificar.modelo = vehiculo.modelo;
+                vehiculoAModificar.añoLanzamiento = vehiculo.añoLanzamiento;
+                vehiculoAModificar.cantidadPuertas = vehiculo.cantidadPuertas;
+            } else {
+                vehiculoAModificar.fabricante = vehiculo.fabricante;
+                vehiculoAModificar.modelo = vehiculo.modelo;
+                vehiculoAModificar.añoLanzamiento = vehiculo.añoLanzamiento;
+                vehiculoAModificar.transmision4x4 = vehiculo.transmision4x4;
+            }
+            actualizarTabla();
+            ocultarFormulario();
+            
+        }
+        
+    }
+
+
+    function removerVehiculo(id){
+        if (Vehiculo.removeVehiculoById(arrayVehiculos, id)){
+            ocultarFormulario();
+        } 
+        actualizarTabla();
+    }
+
+    function validarVehiculo(conId){
+        let mensaje = "";
+        let error = false;
+        let idVehiculo = 0;
+        let celdaId = document.getElementById("txtId");
+        let celdaFabricante = document.getElementById("txtFabricante");
+        let celdaModelo = document.getElementById("txtModelo");
+        let celdaAñoLanza = document.getElementById("txtAñoLanza");
+        //misc1 corresponde a variable miscelanea que toma valores diferentes dependiendo de la clase
+        let celdaMisc1;
+
+        if (conId){
+            if (!Vehiculo.validarId(celdaId.value)){
+                mensaje += "Id incorrecto o inexistente. ";
+                celdaId.value = "";
+                error = true;
+            } else {
+                idVehiculo = celdaId.value;
+            }
+        }
+
+        if (!Vehiculo.validarFabricante(celdaFabricante.value)){
+            mensaje += "Fabricante incorrecto. ";
+            celdaFabricante.value = "";
+            error = true;
+        } 
+        if (!Vehiculo.validarModelo(celdaModelo.value)){
+            mensaje += "Modelo incorrecto. ";
+            celdaModelo.value = "";
+            error = true;
+        }
+
+        if (!Vehiculo.validarAñoLanzamiento(celdaAñoLanza.value)){
+            mensaje += "Año de lanzamiento incorrecto. ";
+            celdaAñoLanza.value = "";
+            error = true;   
+        }
+        switch(document.getElementById("cmbTipo").selectedIndex){
+            case 0:
+                celdaMisc1 = document.getElementById("txtMisc1");//Cantidad de puertas
+                if (!Auto.validarCantidadPuertas(celdaMisc1.value)){
+                    mensaje += "Cantidad de puertas incorrecta. ";
+                    celdaMisc1.value = "";
+                    error = true;
+                }
+                if (!error){
+                    return new Auto(idVehiculo, celdaFabricante.value, celdaModelo.value, celdaAñoLanza.value, celdaMisc1.value);
+                }
+                break;
+            case 1:
+                celdaMisc1 = document.getElementById("txtMisc1");//transmision4x4
+                if (!Camioneta.validartransmision4x4(celdaMisc1.value)){
+                    mensaje += "transmision4x4 incorrecta. ";
+                    celdaMisc1.value = "";
+                    error = true;
+                
+                }
+                if (!error){
+                    return new Camioneta(idVehiculo, celdaFabricante.value, celdaModelo.value, celdaAñoLanza.value, celdaMisc1.value);
+                }
+                break;
+        }
+        
+        if (error){
+            alert(mensaje);
+            return null;
+        } 
+        
+        
+    }
+
+    /////////////////HTTP//////////////
+
+    //PUNTO 3
+    //GET VEHICULO (AUTO O CAMIONETA) CON FETCH SIN ASYNC
+    function getVehiculosFETCHSinAsync(){
+        bloquearPantalla();
+        fetch("http://localhost:5000/vehiculos/vehiculos").then(function(response){
+            if (response.status == 200){
+                return response.text();
+            } else {
+                alert ("Error: " + response.status);
+            }          
+        }).catch(function(response){
+            alert("Error de conexión");
+        })
+        .then(function(texto){
+            desbloquearPantalla();
+            let arrayObj = Vehiculo.TraducirJson(texto);
+            let arrayPer = Vehiculo.generarArrayVehiculos(arrayObj);
+            arrayVehiculos = arrayPer;//array en memoria
+            generarTablaHtml();
+            
+            
+            
+        })
+        .finally(()=>{desbloquearPantalla()});
+              
+    }
+
+    //PUNTO 4
+    ///PUT VEHICULO (AUTO O CAMIONETA) XML
+
+    function putVehiculosXML(){
+    let vehiculoNuevo = validarVehiculo(false);
+
+    if (vehiculoNuevo != null){
+        let request = new XMLHttpRequest();
+        request.onreadystatechange=function(){
+            bloquearPantalla();
+            if(request.readyState == 4 && request.status == 200){
+                desbloquearPantalla();
+                ocultarFormulario();
+                mostrarVisualizador();
+                agregarVehiculo(vehiculoNuevo, JSON.parse(request.responseText).id)
+                alert("Vehículo agregado. Status: " + request.status);
+                
+            } else {
+                if (request.readyState == 4){
+                    desbloquearPantalla();
+                    informarError(request);
+                    ocultarFormulario();
+                    mostrarVisualizador();
+                }
+            }
+        
+        }
+        if (vehiculoNuevo instanceof Auto){
+                var url = 'http://localhost:5000/vehiculos/insertarauto';
+            } else {
+                var url = 'http://localhost:5000/vehiculos/insertarcamioneta';
+            }
+        let vehiculoJson = vehiculoNuevo.toJsonString(false);
+        
+        request.open("PUT", url);
+        request.setRequestHeader("Content-type", "application/json"); 
+        request.send(vehiculoJson);
+
+    }
+    
+    }
+
+    //PUNTO 5
+    //POST VEHICULO (AUTO O CAMIONETA) ELIJO ASYNC FETCH PORQUE ES DE MI PREFERENCIA
+
+    async function postVehiculoFETCH(){
+        var vehiculo = validarVehiculo(true);
+        if (vehiculo != null){
+            if (vehiculo instanceof Auto){
+                var url = 'http://localhost:5000/vehiculos/modificarauto';
+            } else {
+                var url = 'http://localhost:5000/vehiculos/modificarcamioneta';
+            }
+            var vehiculoJson = vehiculo.toJsonString(true);
+            try {
+            bloquearPantalla();
+            let response = await fetch(url, {
+                method:"POST",
+                headers:{"Content-type":"application/json"},
+                body: vehiculoJson
+
+            });
+            let cuerpo = await response.text();
+            if (response.status == 200){
+                modificarVehiculo(vehiculo);
+                alert("Modificación exitosa. Status: " + response.status + "\n" + cuerpo);
+            } else {
+                alert("Error.\n" + cuerpo);
+            }
+            }
+            catch (e){
+                alert ("Error" + e.message);
+            }
+            finally{
+                desbloquearPantalla();
+                ocultarFormulario();
+                mostrarVisualizador();
+            }
+        }
+        
+    }
+
+    //PUNTO 6
+    //DELETE VEHICULO (AUTO O CAMIONETA) ASYNC FETCH
+
+    async function deleteVehiculoFETCH(){
+        var id = document.getElementById("txtId").value;
+        try {
+            bloquearPantalla();
+            let response = await fetch("http://localhost:5000/vehiculos/eliminarvehiculo", {
+                method:"DELETE",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({"id":id})
+            });
+            let cuerpo = await response.text();
+            if (response.status == 200){
+                alert("Status:" + response.status + "\n" + cuerpo);
+                removerVehiculo(id);
+            } else {
+                alert("Error.\n" + response.status + cuerpo);
+            }
+        } catch (e){
+            alert ("error" + e.message);
+        }
+        finally{
+            desbloquearPantalla();
+            ocultarFormulario();
+            mostrarVisualizador();
+        }
+    }
+
+
+    //caso de error
+    function informarError(r){
+        let respuestaServidor = "";
+        if (r.responseText != null){
+            respuestaServidor = "\nRespuesta del servidor: \n" + r.responseText;
+        }
+        alert("Error" + "Status: " + r.status + respuestaServidor);
+    }
+
+
+
+
+
+
+
+</script>
+</html>
